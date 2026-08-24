@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from decimal import Decimal
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -225,6 +226,20 @@ def init_db() -> None:
         conn.executescript(schema)
 
 
+def _normalize_value(value: Any) -> Any:
+    # PostgreSQL returns NUMERIC/AVG results as Decimal. Pandas treats a
+    # Series of Decimals as object dtype, so numeric operations such as
+    # Series.round() fail. Convert database Decimal values to regular floats
+    # at the boundary so SQLite and PostgreSQL behave consistently.
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: _normalize_value(value) for key, value in row.items()}
+
+
 def fetch_all(query: str, params: tuple = ()):
     with connect() as conn:
         if conn.backend == "sqlite":
@@ -235,7 +250,7 @@ def fetch_all(query: str, params: tuple = ()):
         cur = conn.raw.cursor(cursor_factory=RealDictCursor)
         try:
             cur.execute(_translate(query), params)
-            return [dict(r) for r in cur.fetchall()]
+            return [_normalize_row(dict(r)) for r in cur.fetchall()]
         finally:
             cur.close()
 

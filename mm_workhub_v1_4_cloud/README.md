@@ -129,3 +129,8 @@ Never commit any of the following to GitHub:
 - Supabase database passwords
 
 Use a **private GitHub repository** and a **private Streamlit app** for real work data.
+
+## V1.4.1 cloud hotfix
+
+- Fixed PostgreSQL `AVG()` values being returned as `Decimal`, which caused the Dashboard and Workflow progress calculations to fail on Streamlit Cloud.
+- PostgreSQL numeric aggregates are now normalized at the database boundary so cloud and local behavior remain consistent.
